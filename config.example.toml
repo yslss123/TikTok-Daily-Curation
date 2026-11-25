@@ -4,8 +4,23 @@ max_items = 20
 
 [paths]
 candidates = "data/candidates.json"
-output_dir = "output"
 database = "data/curation.sqlite3"
+report_dir = "reports"
+output_dir = "output"
+log_file = "logs/tdc.log"
+
+[research_api]
+# Enable only after TikTok approves your Research API application.
+enabled = false
+start_days_ago = 7
+max_count = 100
+max_pages = 2
+# Empty regions means no region filter (subject to the approved API dataset).
+regions = []
+keywords = [
+  "funny", "comedy", "beauty", "makeup", "creative",
+  "diy", "weird", "amazing", "satisfying", "life hack"
+]
 
 [video]
 ffmpeg = "ffmpeg"

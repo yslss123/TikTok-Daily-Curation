@@ -1,0 +1,17 @@
+[
+  {
+    "id": "sample-001",
+    "title": "Example funny clip",
+    "category": "funny",
+    "source_url": "https://www.tiktok.com/",
+    "creator": "creator_handle",
+    "views": 120000,
+    "likes": 15000,
+    "comments": 800,
+    "shares": 1200,
+    "local_path": "media/sample-001.mp4",
+    "authorized": true,
+    "license": "Written permission from creator",
+    "authorization_reference": "permission-email-2026-001"
+  }
+]

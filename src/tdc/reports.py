@@ -3,6 +3,7 @@ import html
 import json
 from datetime import date
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 def write_daily_reports(candidates, output_dir, report_date: date | None = None):
@@ -31,9 +32,14 @@ def write_daily_reports(candidates, output_dir, report_date: date | None = None)
         category = html.escape(item.category)
         creator = html.escape(item.creator)
         url = html.escape(item.source_url, quote=True)
+        parsed = urlsplit(item.source_url)
+        if parsed.scheme in {"http", "https"} and parsed.netloc:
+            title_cell = f'<a href="{url}" target="_blank" rel="noopener">{title}</a>'
+        else:
+            title_cell = title
         rows.append(
-            f'<tr><td>{category}</td><td><a href="{url}" target="_blank" rel="noopener">{title}</a></td>'
-            f'<td>{creator}</td><td>{item.views:,}</td><td>{item.score:.3f}</td></tr>'
+            f"<tr><td>{category}</td><td>{title_cell}</td>"
+            f"<td>{creator}</td><td>{item.views:,}</td><td>{item.score:.3f}</td></tr>"
         )
     page = (
         "<!doctype html><html lang='zh-CN'><meta charset='utf-8'>"

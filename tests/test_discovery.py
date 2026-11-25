@@ -14,7 +14,7 @@ def candidate(tmp_path, **changes):
     data = {
         "id": "video-1",
         "title": "A hilarious comedy prank",
-        "category": "",
+        "category": "funny",
         "source_url": "https://www.tiktok.com/video/1",
         "creator": "creator",
         "views": 120000,

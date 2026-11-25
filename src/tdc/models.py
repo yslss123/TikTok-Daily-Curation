@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 
@@ -68,7 +68,10 @@ class Candidate:
         source_url = str(row.get("source_url") or "").strip()
         if not source_url and video_id:
             source_url = f"https://www.tiktok.com/@{creator}/video/{video_id}" if creator else f"https://www.tiktok.com/video/{video_id}"
-        description = str(row.get("description") or row.get("video_description") or row.get("title") or "")
+        description = str(
+            row.get("description") or row.get("video_description")
+            or row.get("voice_to_text") or row.get("title") or ""
+        )
         try:
             confidence = float(row.get("classification_confidence", 0.0) or 0.0)
         except (TypeError, ValueError):

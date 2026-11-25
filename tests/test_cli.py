@@ -6,6 +6,8 @@ from tdc.cli import run
 
 def test_cli_writes_daily_report_without_ffmpeg(tmp_path, monkeypatch):
     monkeypatch.delenv("AI_API_KEY", raising=False)
+    monkeypatch.delenv("TIKTOK_RESEARCH_CLIENT_KEY", raising=False)
+    monkeypatch.delenv("TIKTOK_RESEARCH_CLIENT_SECRET", raising=False)
     data_dir = tmp_path / "data"
     data_dir.mkdir()
     candidates = [{

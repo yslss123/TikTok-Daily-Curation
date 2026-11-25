@@ -44,18 +44,24 @@ def _make_providers(config, base_dir):
     if research.get("enabled", False):
         client_key = os.getenv("TIKTOK_RESEARCH_CLIENT_KEY", "").strip()
         client_secret = os.getenv("TIKTOK_RESEARCH_CLIENT_SECRET", "").strip()
-        end = datetime.now(timezone.utc).date()
-        start = end - timedelta(days=int(research.get("start_days_ago", 7)))
-        providers.append(TikTokResearchApiProvider(
-            client_key=client_key,
-            client_secret=client_secret,
-            keywords=research.get("keywords", []),
-            regions=research.get("regions", []),
-            start_date=research.get("start_date") or start.strftime("%Y%m%d"),
-            end_date=research.get("end_date") or end.strftime("%Y%m%d"),
-            max_count=research.get("max_count", 100),
-            max_pages=research.get("max_pages", 2),
-        ))
+        if not client_key or not client_secret:
+            logging.warning(
+                "Research API is enabled but credentials are absent; skipping this source. "
+                "Set TIKTOK_RESEARCH_CLIENT_KEY and TIKTOK_RESEARCH_CLIENT_SECRET after approval."
+            )
+        else:
+            end = datetime.now(timezone.utc).date()
+            start = end - timedelta(days=int(research.get("start_days_ago", 7)))
+            providers.append(TikTokResearchApiProvider(
+                client_key=client_key,
+                client_secret=client_secret,
+                keywords=research.get("keywords", []),
+                regions=research.get("regions", []),
+                start_date=research.get("start_date") or start.strftime("%Y%m%d"),
+                end_date=research.get("end_date") or end.strftime("%Y%m%d"),
+                max_count=research.get("max_count", 100),
+                max_pages=research.get("max_pages", 2),
+            ))
     return providers
 
 
@@ -86,9 +92,14 @@ def run(config_path="config.toml", compile_videos=False):
     store = Store(paths["database"])
     candidates = []
     for provider in _make_providers(config, base_dir):
-        fetched = provider.fetch()
-        logging.info("%s: fetched %d candidate records", provider.__class__.__name__, len(fetched))
-        candidates.extend(fetched)
+        try:
+            fetched = provider.fetch()
+            logging.info("%s: fetched %d candidate records", provider.__class__.__name__, len(fetched))
+            candidates.extend(fetched)
+        except Exception:
+            if isinstance(provider, FileProvider):
+                raise
+            logging.exception("%s failed; continuing with remaining sources", provider.__class__.__name__)
 
     # Deduplicate merged providers by stable video ID; keep the first source record.
     merged = {}

@@ -1,23 +1,22 @@
 import json, shutil, subprocess
-from pathlib import Path
 from datetime import date
-from .models import Candidate
+from pathlib import Path
 
-def build_compilation(items: list[Candidate], output_dir: Path, ffmpeg: str="ffmpeg", width: int=1080, height: int=1920, fps: int=30, clip_seconds: int=12) -> Path:
-    if not items: raise ValueError("No authorized local videos available for compilation")
-    if not shutil.which(ffmpeg) and not Path(ffmpeg).exists(): raise RuntimeError("FFmpeg not found. Install FFmpeg and add it to PATH.")
-    day_dir = output_dir / date.today().isoformat(); work = day_dir / "_segments"
-    work.mkdir(parents=True, exist_ok=True)
-    segment_files = []
-    for i, item in enumerate(items, 1):
-        target = work / f"{i:02d}.mp4"
-        cmd = [ffmpeg, "-y", "-i", str(item.local_path), "-t", str(clip_seconds), "-vf", f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,fps={fps},format=yuv420p", "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", str(target)]
-        subprocess.run(cmd, check=True, capture_output=True, text=True)
-        segment_files.append(target)
-    concat = work / "concat.txt"
-    concat.write_text("".join(f"file '{p.resolve().as_posix()}'\n" for p in segment_files), encoding="utf-8")
-    final = day_dir / "daily_best.mp4"
-    subprocess.run([ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", str(concat), "-c", "copy", str(final)], check=True, capture_output=True, text=True)
-    manifest = [{"id":x.id,"title":x.title,"category":x.category,"source_url":x.source_url,"creator":x.creator,"license":x.license,"authorization_reference":x.authorization_reference,"score":x.score} for x in items]
-    (day_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+def build(items, output_dir, cfg):
+    if not items: raise ValueError("No authorized local videos available")
+    ffmpeg=cfg["ffmpeg"]
+    if not shutil.which(ffmpeg) and not Path(ffmpeg).exists(): raise RuntimeError("FFmpeg not found on PATH")
+    folder=Path(output_dir)/date.today().isoformat(); work=folder/"segments"; work.mkdir(parents=True,exist_ok=True)
+    parts=[]
+    for i,c in enumerate(items,1):
+        dst=work/f"{i:02d}.mp4"
+        vf=f"scale={cfg['width']}:{cfg['height']}:force_original_aspect_ratio=decrease,pad={cfg['width']}:{cfg['height']}:(ow-iw)/2:(oh-ih)/2,fps={cfg['fps']},format=yuv420p"
+        subprocess.run([ffmpeg,"-y","-i",str(c.local_path),"-t",str(cfg["clip_seconds"]),"-vf",vf,"-an","-c:v","libx264","-preset","veryfast","-crf","23",str(dst)],check=True,capture_output=True)
+        parts.append(dst)
+    listing=work/"concat.txt"
+    listing.write_text("".join(f"file '{x.resolve().as_posix()}'\n" for x in parts),encoding="utf-8")
+    final=folder/"daily_best.mp4"
+    subprocess.run([ffmpeg,"-y","-f","concat","-safe","0","-i",str(listing),"-c","copy",str(final)],check=True,capture_output=True)
+    manifest=[{"id":c.id,"title":c.title,"category":c.category,"source_url":c.source_url,"creator":c.creator,"license":c.license,"authorization_reference":c.authorization_reference,"score":c.score} for c in items]
+    (folder/"manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
     return final

@@ -1,0 +1,19 @@
+[app]
+timezone = "Asia/Singapore"
+min_items = 10
+max_items = 20
+
+[paths]
+candidates = "data/candidates.json"
+output_dir = "output"
+database = "data/curation.sqlite3"
+
+[video]
+ffmpeg = "ffmpeg"
+width = 1080
+height = 1920
+fps = 30
+clip_seconds = 12
+
+[categories]
+allowed = ["funny", "beauty", "creative", "curiosity"]

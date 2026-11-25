@@ -28,9 +28,18 @@ def load_env_file(path: Path):
             os.environ[key] = value
 
 
-def _make_providers(config):
+def _resolve_paths(config, base_dir: Path):
     paths = config["paths"]
-    providers = [FileProvider(paths["candidates"])]
+    for key in ("candidates", "database", "report_dir", "output_dir", "log_file"):
+        if key in paths:
+            value = Path(paths[key])
+            if not value.is_absolute():
+                paths[key] = str((base_dir / value).resolve())
+
+
+def _make_providers(config, base_dir):
+    paths = config["paths"]
+    providers = [FileProvider(paths["candidates"], base_dir=base_dir)]
     research = config.get("research_api", {})
     if research.get("enabled", False):
         client_key = os.getenv("TIKTOK_RESEARCH_CLIENT_KEY", "").strip()
@@ -52,10 +61,12 @@ def _make_providers(config):
 
 def run(config_path="config.toml", compile_videos=False):
     config_file = Path(config_path).resolve()
-    load_env_file(config_file.parent / ".env")
+    base_dir = config_file.parent
+    load_env_file(base_dir / ".env")
     config = tomllib.loads(config_file.read_text(encoding="utf-8"))
+    _resolve_paths(config, base_dir)
     paths = config["paths"]
-    log_path = Path(paths.get("log_file", "logs/tdc.log"))
+    log_path = Path(paths.get("log_file", base_dir / "logs/tdc.log"))
     log_path.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
@@ -74,7 +85,7 @@ def run(config_path="config.toml", compile_videos=False):
 
     store = Store(paths["database"])
     candidates = []
-    for provider in _make_providers(config):
+    for provider in _make_providers(config, base_dir):
         fetched = provider.fetch()
         logging.info("%s: fetched %d candidate records", provider.__class__.__name__, len(fetched))
         candidates.extend(fetched)
@@ -102,7 +113,7 @@ def run(config_path="config.toml", compile_videos=False):
 
     fresh = [item for item in all_candidates if not store.is_curated(item.id)]
     selected = rank_candidates(fresh, max_items=max_items)
-    report_folder = write_daily_reports(selected, paths.get("report_dir", "reports"))
+    report_folder = write_daily_reports(selected, paths.get("report_dir", base_dir / "reports"))
     for candidate in selected:
         store.mark_curated(candidate.id, date.today().isoformat())
 

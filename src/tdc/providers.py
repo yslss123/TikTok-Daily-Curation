@@ -1,6 +1,6 @@
 import csv
 import json
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -19,8 +19,9 @@ class CandidateProvider:
 class FileProvider(CandidateProvider):
     """Import candidate metadata from a JSON array or CSV file."""
 
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, base_dir: str | Path | None = None):
         self.path = Path(path)
+        self.base_dir = Path(base_dir).resolve() if base_dir else None
 
     def fetch(self) -> list[Candidate]:
         if not self.path.exists():
@@ -33,7 +34,12 @@ class FileProvider(CandidateProvider):
                 rows = json.load(stream)
         if not isinstance(rows, list):
             raise ValueError("Candidate file must contain a JSON array or CSV rows")
-        return [Candidate.from_dict(row) for row in rows]
+        candidates = [Candidate.from_dict(row) for row in rows]
+        if self.base_dir:
+            for candidate in candidates:
+                if str(candidate.local_path) not in {"", "."} and not candidate.local_path.is_absolute():
+                    candidate.local_path = self.base_dir / candidate.local_path
+        return candidates
 
 
 class TikTokResearchApiProvider(CandidateProvider):
